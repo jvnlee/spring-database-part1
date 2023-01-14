@@ -5,6 +5,7 @@ import hello.jdbc.domain.Member;
 import lombok.extern.slf4j.Slf4j;
 
 import java.sql.*;
+import java.util.NoSuchElementException;
 
 /**
  * JDBC - DriverManager 사용
@@ -35,6 +36,41 @@ public class MemberRepositoryV0 {
             throw e;
         } finally {
             close(con, pstmt, null);
+        }
+    }
+
+    public Member findById(String memberId) throws SQLException {
+        String sql = "select * from member where member_id = ?";
+
+        Connection con = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            con = DBConnectionUtil.getConnection();
+            pstmt = con.prepareStatement(sql);
+
+            pstmt.setString(1, memberId);
+
+            // executeUpdate()는 데이터 수정 시에 사용함. 조회 시에는 executeQuery() 사용
+            rs = pstmt.executeQuery();
+
+            // ResultSet 내부의 커서를 반드시 한 번 이동시켜야 실제 유효한 데이터를 읽을 수 있음
+            if (rs.next()) {
+                Member member = new Member();
+                member.setMemberId(rs.getString("member_id"));
+                member.setMoney(rs.getInt("money"));
+
+                log.info("Found member={}", member);
+                return member;
+            } else {
+                throw new NoSuchElementException("Member with member_id " + memberId + "does not exist.");
+            }
+        } catch (SQLException e) {
+            log.error("DB Error", e);
+            throw e;
+        } finally {
+            close(con, pstmt, rs);
         }
     }
 
